@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const driverRoutes = require("./routes/driverRoutes");
 const fareRoutes = require("./routes/fareRoutes");
+const rideRoutes = require("./routes/rideRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/fares", fareRoutes);
+app.use("/api/rides", rideRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
