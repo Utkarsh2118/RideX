@@ -1,6 +1,7 @@
 const Ride = require("../models/Ride");
 const { calculateFare } = require("../services/fareService");
 const { transitionRide } = require("../services/rideService");
+const { matchDriversForRide } = require("../services/driverMatchingService");
 
 const validVehicleTypes = ["bike", "auto", "cab"];
 const validPaymentMethods = ["cash", "online"];
@@ -68,7 +69,29 @@ const createRide = async (req, res) => {
     rideStatus: "REQUESTED",
   });
 
-  res.status(201).json({ success: true, message: "Ride created successfully", data: { ride: publicRide(ride) } });
+  const matchedDrivers = await matchDriversForRide(ride);
+
+  res.status(201).json({
+    success: true,
+    message: matchedDrivers.length ? "Ride created and drivers found" : "Ride created; searching for drivers",
+    data: { ride: publicRide(ride), matchedDrivers },
+  });
+};
+
+const matchRide = async (req, res) => {
+  const ride = await Ride.findOne({ _id: req.params.rideId, passenger: req.user._id });
+  if (!ride) return res.status(404).json({ success: false, message: "Ride not found" });
+
+  if (!["REQUESTED", "SEARCHING_DRIVER"].includes(ride.rideStatus)) {
+    return res.status(409).json({ success: false, message: "Ride is not available for driver matching" });
+  }
+
+  const matchedDrivers = await matchDriversForRide(ride);
+  res.json({
+    success: true,
+    message: matchedDrivers.length ? "Nearby drivers found" : "No nearby drivers are currently available",
+    data: { ride: publicRide(ride), matchedDrivers },
+  });
 };
 
 const getMyRides = async (req, res) => {
@@ -93,4 +116,4 @@ const cancelRide = async (req, res) => {
   res.json({ success: true, message: "Ride cancelled successfully", data: { ride: publicRide(ride) } });
 };
 
-module.exports = { createRide, getMyRides, getRideById, cancelRide };
+module.exports = { createRide, matchRide, getMyRides, getRideById, cancelRide };

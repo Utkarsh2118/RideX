@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   createRide,
+  matchRide,
   getMyRides,
   getRideById,
   cancelRide,
@@ -15,6 +16,7 @@ router.use(protect, authorizeRoles("passenger"));
 
 router.post("/", createRide);
 router.get("/", getMyRides);
+router.post("/:rideId/match", matchRide);
 router.get("/:rideId", getRideById);
 router.patch("/:rideId/cancel", cancelRide);
 
