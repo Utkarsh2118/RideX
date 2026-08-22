@@ -49,7 +49,7 @@ function MapViewport({ center, pickup, destination }) {
   return null
 }
 
-function Map({ pickup, destination, onMapClick, onCurrentLocation }) {
+function Map({ pickup, destination, onMapClick, onCurrentLocation, onRouteMetrics }) {
   const [center, setCenter] = useState(pickup || defaultCenter)
   const [currentLocation, setCurrentLocation] = useState(null)
   const [route, setRoute] = useState(null)
@@ -58,6 +58,7 @@ function Map({ pickup, destination, onMapClick, onCurrentLocation }) {
 
   useEffect(() => {
     if (!pickup || !destination) {
+      onRouteMetrics?.(null)
       return undefined
     }
 
@@ -78,8 +79,13 @@ function Map({ pickup, destination, onMapClick, onCurrentLocation }) {
           return response.json()
         })
         .then((data) => {
-          const geometry = data.routes?.[0]?.geometry?.coordinates
+          const selectedRoute = data.routes?.[0]
+          const geometry = selectedRoute?.geometry?.coordinates
           if (!geometry) throw new Error('No route found')
+          onRouteMetrics?.({
+            distanceKm: selectedRoute.distance / 1000,
+            estimatedMinutes: selectedRoute.duration / 60,
+          })
           setRoute(geometry.map(([longitude, latitude]) => [latitude, longitude]))
         })
         .catch((error) => {
@@ -92,7 +98,7 @@ function Map({ pickup, destination, onMapClick, onCurrentLocation }) {
     })
 
     return () => controller.abort()
-  }, [destination, pickup])
+  }, [destination, onRouteMetrics, pickup])
 
   const mapCenter = useMemo(() => pickup || center, [center, pickup])
 
