@@ -1,121 +1,74 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import Map from './components/Map'
+import LocationSearch from './components/LocationSearch'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [pickupText, setPickupText] = useState('')
+  const [destinationText, setDestinationText] = useState('')
+  const [pickup, setPickup] = useState(null)
+  const [destination, setDestination] = useState(null)
+  const [notice, setNotice] = useState('Click the map to place a pickup or destination.')
+
+  const setPoint = (type, location) => {
+    if (type === 'pickup') setPickup(location)
+    if (type === 'destination') setDestination(location)
+    setNotice(`${type[0].toUpperCase()}${type.slice(1)} location selected.`)
+  }
+
+  const handleMapClick = (location) => {
+    if (!pickup) {
+      setPickup(location)
+      setNotice('Pickup selected. Now choose your destination.')
+      return
+    }
+
+    setDestination(location)
+    setNotice('Route preview ready.')
+  }
+
+  const formatLocation = (location) =>
+    location ? `${location[0].toFixed(5)}, ${location[1].toFixed(5)}` : 'Not selected'
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="ride-app">
+      <header className="topbar">
+        <div className="brand-mark"><span>R</span> RIDEX</div>
+        <span className="service-label">CITY MOBILITY / LOCATION LAB</span>
+      </header>
+
+      <section className="location-workspace">
+        <div className="location-panel">
+          <p className="eyebrow">PLAN YOUR ROUTE</p>
+          <h1>Your ride starts here.</h1>
+          <p className="intro">Choose two points on the map and RideX will build a live route preview.</p>
+
+          <div className="location-fields">
+            <LocationSearch label="Pickup" value={pickupText} onChange={setPickupText} onSelect={(location) => setPoint('pickup', location)} />
+            <LocationSearch label="Destination" value={destinationText} onChange={setDestinationText} onSelect={(location) => setPoint('destination', location)} />
+          </div>
+
+          <p className="notice" role="status">{notice}</p>
+
+          <div className="coordinates">
+            <div><span className="coordinate-dot pickup-dot" />Pickup<strong>{formatLocation(pickup)}</strong></div>
+            <div><span className="coordinate-dot destination-dot" />Destination<strong>{formatLocation(destination)}</strong></div>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+
+        <Map
+          pickup={pickup}
+          destination={destination}
+          onMapClick={handleMapClick}
+          onCurrentLocation={(location, error) => {
+            if (location) {
+              setPickup(location)
+              setNotice('Your current location is set as pickup.')
+            } else if (error) setNotice(error)
+          }}
+        />
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 

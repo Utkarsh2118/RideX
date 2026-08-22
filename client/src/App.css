@@ -1,3 +1,4 @@
+.field-error { color: #a6452a; display: block; font-size: .75rem; margin-top: 6px; }
 .counter {
   font-size: 16px;
   padding: 5px 10px;
