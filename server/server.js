@@ -3,6 +3,9 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
@@ -20,9 +23,10 @@ const { setSocketServer } = require("./socket/socketEmitter");
 
 const app = express();
 const httpServer = http.createServer(app);
+const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: clientUrl,
   },
 });
 
@@ -34,7 +38,19 @@ if (!process.env.JWT_SECRET) {
 
 connectDB();
 
-app.use(express.json());
+app.use(helmet());
+app.use(cors({ origin: clientUrl }));
+app.use(express.json({ limit: "100kb" }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { success: false, message: "Too many authentication attempts" },
+});
+
+app.use("/api/auth", authLimiter);
 
 app.get("/", (req, res) => {
   res.send("RideX Backend is Running 🚀");
