@@ -37,6 +37,10 @@ const rideSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    rejectedDrivers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
     pickupLocation: {
       type: pointSchema,
       required: true,
