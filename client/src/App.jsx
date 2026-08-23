@@ -6,6 +6,7 @@ import { useAuth } from './context/useAuth'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import { AdminDashboard, DriverDashboard, PassengerDashboard } from './pages/DashboardPages'
 import LandingPage from './pages/LandingPage'
+import { DriverOnboardingPage, RideHistoryPage } from './pages/WorkflowPages'
 import './App.css'
 
 function DashboardRedirect() {
@@ -14,7 +15,7 @@ function DashboardRedirect() {
 }
 
 function App() {
-  return <AuthProvider><BrowserRouter><Routes><Route path="/" element={<LandingPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<ProtectedRoute />}><Route element={<AppShell />}><Route path="/dashboard" element={<DashboardRedirect />} /><Route element={<ProtectedRoute roles={['passenger']} />}><Route path="/dashboard/passenger" element={<PassengerDashboard />} /></Route><Route element={<ProtectedRoute roles={['driver']} />}><Route path="/dashboard/driver" element={<DriverDashboard />} /></Route><Route element={<ProtectedRoute roles={['admin']} />}><Route path="/dashboard/admin" element={<AdminDashboard />} /></Route></Route></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes></BrowserRouter></AuthProvider>
+  return <AuthProvider><BrowserRouter><Routes><Route path="/" element={<LandingPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<ProtectedRoute />}><Route element={<AppShell />}><Route path="/dashboard" element={<DashboardRedirect />} /><Route element={<ProtectedRoute roles={['passenger']} />}><Route path="/dashboard/passenger" element={<PassengerDashboard />} /><Route path="/rides" element={<RideHistoryPage />} /></Route><Route element={<ProtectedRoute roles={['passenger', 'driver']} />}><Route path="/driver/onboarding" element={<DriverOnboardingPage />} /></Route><Route element={<ProtectedRoute roles={['driver']} />}><Route path="/dashboard/driver" element={<DriverDashboard />} /></Route><Route element={<ProtectedRoute roles={['admin']} />}><Route path="/dashboard/admin" element={<AdminDashboard />} /></Route></Route></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes></BrowserRouter></AuthProvider>
 }
 
 export default App

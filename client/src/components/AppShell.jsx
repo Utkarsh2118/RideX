@@ -17,7 +17,7 @@ function AppShell() {
           <button type="button" className="icon-button" aria-label="Log out" title="Log out" onClick={logout}><LogOut size={17} /></button>
         </div>
       </header>
-      <main className="shell-content"><Outlet /></main>
+      <nav className="shell-links">{user.role === 'passenger' && <><Link to="/dashboard/passenger">Book ride</Link><Link to="/rides">Ride history</Link><Link to="/driver/onboarding">Become a driver</Link></>}{user.role === 'driver' && <Link to="/dashboard/driver">Driver desk</Link>}{user.role === 'admin' && <Link to="/dashboard/admin">Operations</Link>}</nav><main className="shell-content"><Outlet /></main>
     </div>
   )
 }
