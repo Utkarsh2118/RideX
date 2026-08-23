@@ -49,7 +49,7 @@ function MapViewport({ center, pickup, destination }) {
   return null
 }
 
-function Map({ pickup, destination, onMapClick, onCurrentLocation, onRouteMetrics }) {
+function Map({ pickup, destination, driverLocation, onMapClick, onCurrentLocation, onRouteMetrics }) {
   const [center, setCenter] = useState(pickup || defaultCenter)
   const [currentLocation, setCurrentLocation] = useState(null)
   const [route, setRoute] = useState(null)
@@ -139,6 +139,7 @@ function Map({ pickup, destination, onMapClick, onCurrentLocation, onRouteMetric
         {pickup && <Marker position={pickup} icon={pickupIcon}><Popup>Pickup location</Popup></Marker>}
         {destination && <Marker position={destination} icon={destinationIcon}><Popup>Destination</Popup></Marker>}
         {currentLocation && <Marker position={currentLocation} icon={locationIcon}><Popup>Your current location</Popup></Marker>}
+        {driverLocation && <Marker position={driverLocation} icon={locationIcon}><Popup>Driver location</Popup></Marker>}
         {route && pickup && destination && <Polyline positions={route} pathOptions={{ color: '#ef6c45', weight: 5 }} />}
       </MapContainer>
     </div>

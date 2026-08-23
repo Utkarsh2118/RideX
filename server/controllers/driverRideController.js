@@ -1,6 +1,7 @@
 const Driver = require("../models/Driver");
 const Ride = require("../models/Ride");
 const { transitionRide } = require("../services/rideService");
+const { emitRideStatus } = require("../socket/socketEmitter");
 
 const activeStatuses = [
   "DRIVER_ASSIGNED",
@@ -79,6 +80,7 @@ const acceptRide = async (req, res) => {
 
   driver.isOnline = false;
   await driver.save();
+  emitRideStatus(ride);
 
   res.json({ success: true, message: "Ride accepted successfully", data: { ride: publicRide(ride) } });
 };
@@ -113,6 +115,8 @@ const updateRideStatus = async (req, res) => {
   if (status === "RIDE_COMPLETED") {
     await Driver.findOneAndUpdate({ user: req.user._id }, { $inc: { totalRides: 1, totalEarnings: ride.fare }, isOnline: false });
   }
+
+  emitRideStatus(ride);
 
   res.json({ success: true, message: "Ride status updated successfully", data: { ride: publicRide(ride) } });
 };

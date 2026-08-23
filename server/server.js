@@ -12,6 +12,7 @@ const rideRoutes = require("./routes/rideRoutes");
 const driverRideRoutes = require("./routes/driverRideRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const registerSocketServer = require("./socket/socketServer");
+const { setSocketServer } = require("./socket/socketEmitter");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -51,6 +52,7 @@ app.use((req, res) => {
 app.use(errorMiddleware);
 
 registerSocketServer(io);
+setSocketServer(io);
 
 httpServer.listen(PORT, () => {
   console.log(`RideX server running on port ${PORT}`);
