@@ -5,6 +5,7 @@ import LocationSearch from '../components/LocationSearch'
 import { useAuth } from '../context/useAuth'
 import { createRide } from '../api/rideApi'
 import { acceptDriverRide, getActiveDriverRide, getDriverProfile, getRideRequests, rejectDriverRide, setDriverOnline, updateDriverRideStatus } from '../api/driverApi'
+import { getAdminDrivers, getAdminStats, reviewAdminDriver } from '../api/adminApi'
 import useRideSocket from '../hooks/useRideSocket'
 
 function PassengerDashboard() {
@@ -132,7 +133,29 @@ function DriverDashboard() {
 }
 
 function AdminDashboard() {
-  return <section className="role-dashboard"><p className="eyebrow">OPERATIONS DESK</p><h1>Keep every ride moving.</h1><div className="role-grid"><div><ShieldCheck size={21} /><strong>Driver verification</strong><span>Review onboarding applications and approvals.</span></div><div><MapPinned size={21} /><strong>Ride operations</strong><span>Monitor the platform as it grows.</span></div></div><p className="notice">Admin tools are protected by the admin role and will expand with platform analytics.</p></section>
+  const [stats, setStats] = useState(null)
+  const [drivers, setDrivers] = useState([])
+  const [notice, setNotice] = useState('Loading operations data...')
+
+  const refresh = async () => {
+    try {
+      const [statsResponse, driversResponse] = await Promise.all([getAdminStats(), getAdminDrivers()])
+      setStats(statsResponse.data.data.stats)
+      setDrivers(driversResponse.data.data.drivers)
+      setNotice('Operations data is up to date.')
+    } catch (error) { setNotice(error.response?.data?.message || 'Unable to load operations data') }
+  }
+
+  useEffect(() => { queueMicrotask(refresh) }, [])
+
+  const review = async (driverId, status) => {
+    const rejectionReason = status === 'rejected' ? window.prompt('Reason for rejection') : undefined
+    if (status === 'rejected' && !rejectionReason?.trim()) return
+    try { await reviewAdminDriver(driverId, status, rejectionReason); setNotice(`Driver ${status}.`); refresh() } catch (error) { setNotice(error.response?.data?.message || 'Unable to review driver') }
+  }
+
+  const statCards = [['Users', stats?.totalUsers], ['Drivers', stats?.totalDrivers], ['Pending', stats?.pendingDrivers], ['Active rides', stats?.activeRides], ['Completed', stats?.completedRides], ['Revenue', `Rs ${(stats?.totalRevenue || 0).toFixed(0)}`]]
+  return <section className="role-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">OPERATIONS DESK</p><h1>Keep every ride moving.</h1></div><ShieldCheck size={24} color="#ef6c45" /></div><p className="notice">{notice}</p><div className="admin-stats">{statCards.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? '...'}</strong></div>)}</div><div className="admin-review"><div><p className="eyebrow">DRIVER VERIFICATION</p><h2>Pending applications</h2></div>{drivers.length ? drivers.map((driver) => <div className="request-row" key={driver.id}><div><strong>{driver.vehicleModel} · {driver.vehicleType}</strong><span>{driver.vehicleNumber} · {driver.licenseNumber}</span></div><div><button type="button" onClick={() => review(driver.id, 'approved')}>Approve</button><button type="button" className="quiet-button" onClick={() => review(driver.id, 'rejected')}>Reject</button></div></div>) : <p className="empty-state">No pending driver applications.</p>}</div></section>
 }
 
 export { PassengerDashboard, DriverDashboard, AdminDashboard }
