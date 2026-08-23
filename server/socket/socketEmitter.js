@@ -15,4 +15,17 @@ const emitRideStatus = (ride) => {
   });
 };
 
-module.exports = { setSocketServer, emitRideStatus };
+const emitUserNotification = (notification) => {
+  if (!io) return;
+
+  io.to(`user:${notification.recipient}`).emit("notification:new", {
+    id: notification._id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    ride: notification.ride,
+    createdAt: notification.createdAt,
+  });
+};
+
+module.exports = { setSocketServer, emitRideStatus, emitUserNotification };

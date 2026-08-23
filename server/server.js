@@ -12,6 +12,7 @@ const rideRoutes = require("./routes/rideRoutes");
 const driverRideRoutes = require("./routes/driverRideRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const ratingRoutes = require("./routes/ratingRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const registerSocketServer = require("./socket/socketServer");
 const { setSocketServer } = require("./socket/socketEmitter");
@@ -45,6 +46,7 @@ app.use("/api/rides", rideRoutes);
 app.use("/api/driver-rides", driverRideRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/ratings", ratingRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

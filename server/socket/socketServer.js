@@ -56,6 +56,8 @@ const registerSocketServer = (io) => {
   io.use(authenticateSocket);
 
   io.on("connection", (socket) => {
+    socket.join(`user:${socket.user._id}`);
+
     socket.on("ride:subscribe", async ({ rideId } = {}, acknowledge) => {
       const ride = await getAuthorizedRide(socket, rideId);
       if (!ride) return acknowledge?.(socketError("Ride not found or unauthorized"));
