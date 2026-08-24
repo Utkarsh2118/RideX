@@ -1,5 +1,6 @@
 const Driver = require("../models/Driver");
 const Ride = require("../models/Ride");
+const Payment = require("../models/Payment");
 const { transitionRide } = require("../services/rideService");
 const { emitRideStatus } = require("../socket/socketEmitter");
 const { createNotification } = require("../services/notificationService");
@@ -116,6 +117,13 @@ const updateRideStatus = async (req, res) => {
 
   if (status === "RIDE_COMPLETED") {
     await Driver.findOneAndUpdate({ user: req.user._id }, { $inc: { totalRides: 1, totalEarnings: ride.fare }, isOnline: false });
+    if (ride.paymentMethod === "wallet") {
+      await Payment.findOneAndUpdate(
+        { ride: ride._id },
+        { ride: ride._id, passenger: ride.passenger, amount: ride.fare, currency: ride.currency, method: "wallet", status: "paid" },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+      );
+    }
   }
 
   emitRideStatus(ride);

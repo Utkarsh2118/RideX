@@ -75,12 +75,23 @@ const rideSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cash", "online"],
+      enum: ["cash", "online", "wallet"],
       required: true,
+    },
+    promoCode: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
     rideStatus: {

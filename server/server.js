@@ -17,6 +17,8 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const ratingRoutes = require("./routes/ratingRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const walletRoutes = require("./routes/walletRoutes");
+const promoRoutes = require("./routes/promoRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const registerSocketServer = require("./socket/socketServer");
 const { setSocketServer } = require("./socket/socketEmitter");
@@ -65,6 +67,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/promos", promoRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

@@ -2,9 +2,11 @@ const Ride = require("../models/Ride");
 const { calculateFare } = require("../services/fareService");
 const { transitionRide } = require("../services/rideService");
 const { matchDriversForRide } = require("../services/driverMatchingService");
+const { previewPromo, redeemPromo } = require("../services/promoService");
+const { debitWallet, creditWallet } = require("../services/walletService");
 
 const validVehicleTypes = ["bike", "auto", "cab"];
-const validPaymentMethods = ["cash", "online"];
+const validPaymentMethods = ["cash", "online", "wallet"];
 
 const isValidPoint = (point) => {
   if (!point || point.type !== "Point" || !Array.isArray(point.coordinates) || point.coordinates.length !== 2) {
@@ -29,6 +31,8 @@ const publicRide = (ride) => ({
   vehicleType: ride.vehicleType,
   paymentMethod: ride.paymentMethod,
   paymentStatus: ride.paymentStatus,
+  promoCode: ride.promoCode,
+  discountAmount: ride.discountAmount,
   rideStatus: ride.rideStatus,
   cancellationReason: ride.cancellationReason,
   createdAt: ride.createdAt,
@@ -37,7 +41,7 @@ const publicRide = (ride) => ({
 
 const createRide = async (req, res) => {
   const body = req.body && typeof req.body === "object" ? req.body : {};
-  const { pickupLocation, destinationLocation, distanceKm, estimatedDurationMinutes, vehicleType, paymentMethod } = body;
+  const { pickupLocation, destinationLocation, distanceKm, estimatedDurationMinutes, vehicleType, paymentMethod, promoCode } = body;
 
   if (!isValidPoint(pickupLocation) || !isValidPoint(destinationLocation)) {
     return res.status(400).json({ success: false, message: "Pickup and destination must be valid map points" });
@@ -56,18 +60,48 @@ const createRide = async (req, res) => {
   }
 
   const quote = calculateFare({ distanceKm, estimatedMinutes: estimatedDurationMinutes, vehicleType });
+
+  let finalFare = quote.fare;
+  let discountAmount = 0;
+  let appliedPromo = null;
+
+  if (promoCode) {
+    const promoResult = await previewPromo(promoCode, req.user._id, quote.fare);
+    if (!promoResult.valid) {
+      return res.status(400).json({ success: false, message: promoResult.message });
+    }
+    discountAmount = promoResult.discount;
+    finalFare = promoResult.finalFare;
+    appliedPromo = promoResult.promo;
+  }
+
+  if (paymentMethod === "wallet") {
+    try {
+      await debitWallet(req.user._id, finalFare, "ride_payment");
+    } catch (error) {
+      return res.status(error.statusCode || 402).json({ success: false, message: error.message });
+    }
+  }
+
   const ride = await Ride.create({
     passenger: req.user._id,
     pickupLocation,
     destinationLocation,
     distanceKm: quote.distanceKm,
     estimatedDurationMinutes: quote.estimatedMinutes,
-    fare: quote.fare,
+    fare: finalFare,
     currency: quote.currency,
     vehicleType,
     paymentMethod,
+    promoCode: appliedPromo ? appliedPromo.code : null,
+    discountAmount,
+    paymentStatus: paymentMethod === "wallet" ? "paid" : "pending",
     rideStatus: "REQUESTED",
   });
+
+  if (appliedPromo) {
+    await redeemPromo(appliedPromo, req.user._id);
+  }
 
   const matchedDrivers = await matchDriversForRide(ride);
 
@@ -111,6 +145,12 @@ const cancelRide = async (req, res) => {
 
   transitionRide(ride, "CANCELLED");
   ride.cancellationReason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 300) : "Cancelled by passenger";
+
+  if (ride.paymentMethod === "wallet" && ride.paymentStatus === "paid") {
+    await creditWallet(req.user._id, ride.fare, "ride_refund", ride._id);
+    ride.paymentStatus = "refunded";
+  }
+
   await ride.save();
 
   res.json({ success: true, message: "Ride cancelled successfully", data: { ride: publicRide(ride) } });
