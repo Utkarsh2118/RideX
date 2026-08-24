@@ -5,7 +5,10 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { useAuth } from './context/useAuth'
 const LandingPage = lazy(() => import('./pages/LandingPage'))
-const LoginPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.LoginPage })))
+const PortalChooserPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.PortalChooserPage })))
+const PassengerLoginPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.PassengerLoginPage })))
+const DriverLoginPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.DriverLoginPage })))
+const AdminLoginPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.AdminLoginPage })))
 const RegisterPage = lazy(() => import('./pages/AuthPages').then((module) => ({ default: module.RegisterPage })))
 const AdminDashboard = lazy(() => import('./pages/DashboardPages').then((module) => ({ default: module.AdminDashboard })))
 const DriverDashboard = lazy(() => import('./pages/DashboardPages').then((module) => ({ default: module.DriverDashboard })))
@@ -20,7 +23,7 @@ function DashboardRedirect() {
 }
 
 function App() {
-  return <AuthProvider><BrowserRouter><Suspense fallback={<div className="screen-state">Loading RideX...</div>}><Routes><Route path="/" element={<LandingPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<ProtectedRoute />}><Route element={<AppShell />}><Route path="/dashboard" element={<DashboardRedirect />} /><Route element={<ProtectedRoute roles={['passenger']} />}><Route path="/dashboard/passenger" element={<PassengerDashboard />} /><Route path="/rides" element={<RideHistoryPage />} /></Route><Route element={<ProtectedRoute roles={['passenger', 'driver']} />}><Route path="/driver/onboarding" element={<DriverOnboardingPage />} /></Route><Route element={<ProtectedRoute roles={['driver']} />}><Route path="/dashboard/driver" element={<DriverDashboard />} /></Route><Route element={<ProtectedRoute roles={['admin']} />}><Route path="/dashboard/admin" element={<AdminDashboard />} /></Route></Route></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes></Suspense></BrowserRouter></AuthProvider>
+  return <AuthProvider><BrowserRouter><Suspense fallback={<div className="screen-state">Loading RideX...</div>}><Routes><Route path="/" element={<LandingPage />} /><Route path="/login" element={<PortalChooserPage />} /><Route path="/login/user" element={<PassengerLoginPage />} /><Route path="/login/driver" element={<DriverLoginPage />} /><Route path="/login/admin" element={<AdminLoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<ProtectedRoute />}><Route element={<AppShell />}><Route path="/dashboard" element={<DashboardRedirect />} /><Route element={<ProtectedRoute roles={['passenger']} />}><Route path="/dashboard/passenger" element={<PassengerDashboard />} /><Route path="/rides" element={<RideHistoryPage />} /></Route><Route element={<ProtectedRoute roles={['passenger', 'driver']} />}><Route path="/driver/onboarding" element={<DriverOnboardingPage />} /></Route><Route element={<ProtectedRoute roles={['driver']} />}><Route path="/dashboard/driver" element={<DriverDashboard />} /></Route><Route element={<ProtectedRoute roles={['admin']} />}><Route path="/dashboard/admin" element={<AdminDashboard />} /></Route></Route></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes></Suspense></BrowserRouter></AuthProvider>
 }
 
 export default App

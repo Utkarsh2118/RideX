@@ -74,3 +74,9 @@ button:disabled { cursor: not-allowed; opacity: .4; }
 .active-ride span { color: #2d7d72; font-size: .68rem; font-weight: 800; letter-spacing: .1em; }.active-ride strong { font-size: 1rem; }.active-ride small { color: #52615a; font-size: .78rem; }
 @media (max-width: 800px) { .landing-hero, .booking-grid { display: block; }.route-art { margin-top: 48px; }.landing-values, .role-grid { grid-template-columns: 1fr; }.landing-values div { border-bottom: 1px solid #d7d1c5; }.dashboard-heading { align-items: start; display: block; }.dashboard-badge { margin-top: 18px; }.booking-panel { padding: 22px; } }
 @media (max-width: 800px) { .admin-stats { grid-template-columns: repeat(2, 1fr); }.request-row { align-items: flex-start; flex-direction: column; gap: 12px; }.request-row div:last-child { width: 100%; }.request-row button { margin-left: 0; margin-right: 7px; } }
+.portal-grid { display: grid; gap: 14px; margin: 28px 0 8px; }
+.portal-card { align-items: center; background: #fffdf8; border: 1px solid #d7d1c5; border-radius: 4px; color: #16201d; display: flex; gap: 14px; padding: 18px; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
+.portal-card:hover { border-color: #2d7d72; transform: translateX(3px); }
+.portal-card svg { color: #ef6c45; flex-shrink: 0; }
+.portal-card strong { flex: 1; font-size: 1rem; }
+.portal-card span { align-items: center; color: #2d7d72; display: inline-flex; font-size: .8rem; gap: 5px; }
