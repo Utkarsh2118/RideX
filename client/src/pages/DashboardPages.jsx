@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { CarFront, CircleDollarSign, MapPinned, ShieldCheck } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Bike, Car, CarFront, CircleDollarSign, Clock, MapPinned, Radio, ShieldCheck } from 'lucide-react'
 import Map from '../components/Map'
 import LocationSearch from '../components/LocationSearch'
 import { useAuth } from '../context/useAuth'
@@ -7,6 +7,21 @@ import { createRide } from '../api/rideApi'
 import { acceptDriverRide, getActiveDriverRide, getDriverProfile, getRideRequests, rejectDriverRide, setDriverOnline, updateDriverRideStatus } from '../api/driverApi'
 import { getAdminDrivers, getAdminStats, reviewAdminDriver } from '../api/adminApi'
 import useRideSocket from '../hooks/useRideSocket'
+
+const VEHICLES = {
+  bike: { label: 'Bike', icon: Bike, speedKmh: 28 },
+  auto: { label: 'Auto', icon: CarFront, speedKmh: 22 },
+  cab: { label: 'Cab', icon: Car, speedKmh: 26 },
+}
+
+function haversineKm([lat1, lon1], [lat2, lon2]) {
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
 
 function PassengerDashboard() {
   const [pickupText, setPickupText] = useState('')
@@ -78,17 +93,35 @@ function PassengerDashboard() {
     setDriverLocation([latitude, longitude])
   }, [])
 
+  const [etaMinutes, setEtaMinutes] = useState(null)
+
+  useEffect(() => {
+    let nextEta = null
+    if (driverLocation && activeRide) {
+      const headingToPickup = !['RIDE_STARTED'].includes(activeRide.rideStatus)
+      const target = headingToPickup ? pickup : destination
+      if (target) {
+        const km = haversineKm(driverLocation, target)
+        const speedKmh = VEHICLES[activeRide.vehicleType]?.speedKmh || 24
+        nextEta = Math.max(1, Math.round((km / speedKmh) * 60))
+      }
+    }
+    setEtaMinutes(nextEta)
+  }, [driverLocation, activeRide, pickup, destination])
+
   const { connectionStatus } = useRideSocket({ token: useAuth().token, rideId: activeRide?.id, onStatus: handleRideStatus, onDriverLocation: handleDriverLocation })
 
-  return <section className="dashboard-page"><div className="dashboard-heading"><div><p className="eyebrow">PASSENGER DESK</p><h1>Where are you going?</h1><p className="intro">Plan the route, compare vehicles, and keep the city moving on your terms.</p></div><div className="dashboard-badge"><MapPinned size={17} /> {activeRide ? `Live updates ${connectionStatus}` : 'Live route planner'}</div></div><div className="booking-grid"><div className="booking-panel"><LocationSearch label="Pickup" value={pickupText} onChange={setPickupText} onSelect={(location) => setPoint('pickup', location)} /><LocationSearch label="Destination" value={destinationText} onChange={setDestinationText} onSelect={(location) => setPoint('destination', location)} /><p className="notice" role="status">{notice}</p><div className="coordinates"><div><span className="coordinate-dot pickup-dot" />Pickup<strong>{pickup ? `${pickup[0].toFixed(5)}, ${pickup[1].toFixed(5)}` : 'Not selected'}</strong></div><div><span className="coordinate-dot destination-dot" />Destination<strong>{destination ? `${destination[0].toFixed(5)}, ${destination[1].toFixed(5)}` : 'Not selected'}</strong></div></div>{routeMetrics && <div className="route-summary"><span>ROUTE ESTIMATE</span><strong>{routeMetrics.distanceKm.toFixed(1)} km / {Math.round(routeMetrics.estimatedMinutes)} min</strong></div>}{isQuoteLoading && <p className="quote-status">Calculating vehicle fares...</p>}{quotes.length > 0 && <div className="quote-list">{quotes.map((quote) => <button type="button" className={`quote ${selectedVehicle === quote.vehicleType ? 'quote-selected' : ''}`} key={quote.vehicleType} onClick={() => setSelectedVehicle(quote.vehicleType)}><span>{quote.vehicleType}</span><strong>Rs {quote.fare.toFixed(0)}</strong></button>)}</div>}<label className="payment-select">Payment<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">Cash</option><option value="online">Online</option></select></label><button type="button" className="book-button" onClick={bookRide} disabled={isBooking || !routeMetrics}>{isBooking ? 'Requesting ride...' : 'Request this ride'}</button>{activeRide && <div className="active-ride"><span>RIDE REQUESTED</span><strong>{activeRide.rideStatus.replaceAll('_', ' ')}</strong><small>Fare locked at Rs {activeRide.fare.toFixed(0)}. Driver updates are live.</small></div>}</div><Map pickup={pickup} destination={destination} driverLocation={driverLocation} onMapClick={(location) => { if (!pickup) { setPickup(location); setNotice('Pickup selected. Now choose your destination.') } else { setDestination(location); setNotice('Route preview ready.') } }} onCurrentLocation={(location, error) => { if (location) { setPickup(location); setNotice('Your current location is set as pickup.') } else if (error) setNotice(error) }} onRouteMetrics={setRouteMetrics} /></div></section>
+  return <section className="dashboard-page"><div className="dashboard-heading"><div><p className="eyebrow">PASSENGER DESK</p><h1>Where are you going?</h1><p className="intro">Plan the route, compare vehicles, and keep the city moving on your terms.</p></div><div className="dashboard-badge"><MapPinned size={17} /> {activeRide ? (etaMinutes != null ? `Driver ~${etaMinutes} min away` : `Live updates ${connectionStatus}`) : 'Live route planner'}</div></div><div className="booking-grid"><div className="booking-panel"><LocationSearch label="Pickup" value={pickupText} onChange={setPickupText} onSelect={(location) => setPoint('pickup', location)} /><LocationSearch label="Destination" value={destinationText} onChange={setDestinationText} onSelect={(location) => setPoint('destination', location)} /><p className="notice" role="status">{notice}</p><div className="coordinates"><div><span className="coordinate-dot pickup-dot" />Pickup<strong>{pickup ? `${pickup[0].toFixed(5)}, ${pickup[1].toFixed(5)}` : 'Not selected'}</strong></div><div><span className="coordinate-dot destination-dot" />Destination<strong>{destination ? `${destination[0].toFixed(5)}, ${destination[1].toFixed(5)}` : 'Not selected'}</strong></div></div>{routeMetrics && <div className="route-summary"><span>ROUTE ESTIMATE</span><strong>{routeMetrics.distanceKm.toFixed(1)} km / {Math.round(routeMetrics.estimatedMinutes)} min</strong></div>}{isQuoteLoading && <p className="quote-status">Calculating vehicle fares...</p>}{quotes.length > 0 && <div className="vehicle-grid">{['bike', 'auto', 'cab'].map((type) => { const quote = quotes.find((item) => item.vehicleType === type); const Icon = VEHICLES[type].icon; return <button type="button" key={type} className={`vehicle-card ${selectedVehicle === type ? 'vehicle-card-selected' : ''}`} onClick={() => setSelectedVehicle(type)} disabled={!quote}><Icon size={26} /><span className="vehicle-card-info"><strong>{VEHICLES[type].label}</strong><small>{quote ? `${Math.round(quote.estimatedMinutes)} min ride` : 'Unavailable'}</small></span><strong className="vehicle-card-price">{quote ? `Rs ${quote.fare.toFixed(0)}` : '—'}</strong></button> })}</div>}<label className="payment-select">Payment<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">Cash</option><option value="online">Online</option></select></label><button type="button" className="book-button" onClick={bookRide} disabled={isBooking || !routeMetrics}>{isBooking ? 'Requesting ride...' : 'Request this ride'}</button>{activeRide && <div className="active-ride"><span>RIDE REQUESTED</span><strong>{activeRide.rideStatus.replaceAll('_', ' ')}</strong><small>Fare locked at Rs {activeRide.fare.toFixed(0)}. Driver updates are live.</small>{etaMinutes != null && <small className="eta-line"><Clock size={13} /> ~{etaMinutes} min {activeRide.rideStatus === 'RIDE_STARTED' ? 'to destination' : 'to pickup'}</small>}</div>}</div><Map pickup={pickup} destination={destination} driverLocation={driverLocation} onMapClick={(location) => { if (!pickup) { setPickup(location); setNotice('Pickup selected. Now choose your destination.') } else { setDestination(location); setNotice('Route preview ready.') } }} onCurrentLocation={(location, error) => { if (location) { setPickup(location); setNotice('Your current location is set as pickup.') } else if (error) setNotice(error) }} onRouteMetrics={setRouteMetrics} /></div></section>
 }
 
 function DriverDashboard() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [profile, setProfile] = useState(null)
   const [requests, setRequests] = useState([])
   const [activeRide, setActiveRide] = useState(null)
   const [notice, setNotice] = useState('Loading your driver workspace...')
+  const [isSharingLocation, setIsSharingLocation] = useState(false)
+  const watchIdRef = useRef(null)
 
   const refresh = async () => {
     try {
@@ -107,6 +140,34 @@ function DriverDashboard() {
     const interval = setInterval(refresh, 15000)
     return () => clearInterval(interval)
   }, [])
+
+  const { sendDriverLocation } = useRideSocket({ token, rideId: activeRide?.id })
+
+  useEffect(() => {
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+      setIsSharingLocation(false)
+    }
+
+    if (!activeRide || activeRide.rideStatus === 'RIDE_COMPLETED' || !navigator.geolocation) {
+      return undefined
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        setIsSharingLocation(true)
+        sendDriverLocation({ type: 'Point', coordinates: [coords.longitude, coords.latitude] })
+      },
+      () => setNotice('Turn on location access so the rider can see you arriving.'),
+      { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 },
+    )
+
+    return () => {
+      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+    }
+  }, [activeRide, sendDriverLocation])
 
   const toggleOnline = async () => {
     try {
@@ -129,7 +190,7 @@ function DriverDashboard() {
     try { const { data } = await updateDriverRideStatus(activeRide.id, nextStatus); setActiveRide(nextStatus === 'RIDE_COMPLETED' ? null : data.data.ride); setNotice(data.message); if (nextStatus === 'RIDE_COMPLETED') refresh() } catch (error) { setNotice(error.response?.data?.message || 'Unable to update ride status') }
   }
 
-  return <section className="role-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">DRIVER DESK</p><h1>Ready for the next ride, {user.name.split(' ')[0]}.</h1></div><button type="button" className={`availability ${profile?.isOnline ? 'availability-on' : ''}`} onClick={toggleOnline} disabled={!profile}>{profile?.isOnline ? 'Online' : 'Offline'}</button></div><p className="notice">{notice}</p>{activeRide ? <div className="active-driver-ride"><p className="eyebrow">CURRENT RIDE</p><h2>{activeRide.rideStatus.replaceAll('_', ' ')}</h2><span>{activeRide.distanceKm} km · Rs {activeRide.fare.toFixed(0)} · {activeRide.paymentMethod}</span><button type="button" className="book-button" onClick={advance}>{activeRide.rideStatus === 'RIDE_STARTED' ? 'Complete ride' : 'Advance ride status'}</button></div> : <><div className="role-grid"><div><CarFront size={21} /><strong>{profile?.vehicleModel || 'Vehicle profile'}</strong><span>{profile?.vehicleType || 'Vehicle'} · {profile?.verificationStatus || 'Loading'}</span></div><div><CircleDollarSign size={21} /><strong>Rs {profile?.totalEarnings?.toFixed(0) || '0'}</strong><span>{profile?.totalRides || 0} completed rides</span></div></div><div className="request-list"><p className="eyebrow">RIDE REQUESTS</p>{requests.length ? requests.map((ride) => <div className="request-row" key={ride.id}><div><strong>{ride.vehicleType} · {ride.distanceKm} km</strong><span>Rs {ride.fare.toFixed(0)} · {ride.paymentMethod}</span></div><div><button type="button" onClick={() => accept(ride.id)}>Accept</button><button type="button" className="quiet-button" onClick={() => reject(ride.id)}>Reject</button></div></div>) : <p className="empty-state">No matching ride requests right now.</p>}</div></>}</section>
+  return <section className="role-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">DRIVER DESK</p><h1>Ready for the next ride, {user.name.split(' ')[0]}.</h1></div><button type="button" className={`availability ${profile?.isOnline ? 'availability-on' : ''}`} onClick={toggleOnline} disabled={!profile}>{profile?.isOnline ? 'Online' : 'Offline'}</button></div><p className="notice">{notice}</p>{activeRide ? <div className="active-driver-ride"><p className="eyebrow">CURRENT RIDE</p><h2>{activeRide.rideStatus.replaceAll('_', ' ')}</h2><span>{activeRide.distanceKm} km · Rs {activeRide.fare.toFixed(0)} · {activeRide.paymentMethod}</span>{isSharingLocation && <span className="live-share-badge"><Radio size={13} /> Sharing live location with rider</span>}<button type="button" className="book-button" onClick={advance}>{activeRide.rideStatus === 'RIDE_STARTED' ? 'Complete ride' : 'Advance ride status'}</button></div> : <><div className="role-grid"><div><CarFront size={21} /><strong>{profile?.vehicleModel || 'Vehicle profile'}</strong><span>{profile?.vehicleType || 'Vehicle'} · {profile?.verificationStatus || 'Loading'}</span></div><div><CircleDollarSign size={21} /><strong>Rs {profile?.totalEarnings?.toFixed(0) || '0'}</strong><span>{profile?.totalRides || 0} completed rides</span></div></div><div className="request-list"><p className="eyebrow">RIDE REQUESTS</p>{requests.length ? requests.map((ride) => <div className="request-row" key={ride.id}><div><strong>{ride.vehicleType} · {ride.distanceKm} km</strong><span>Rs {ride.fare.toFixed(0)} · {ride.paymentMethod}</span></div><div><button type="button" onClick={() => accept(ride.id)}>Accept</button><button type="button" className="quiet-button" onClick={() => reject(ride.id)}>Reject</button></div></div>) : <p className="empty-state">No matching ride requests right now.</p>}</div></>}</section>
 }
 
 function AdminDashboard() {
@@ -155,7 +216,7 @@ function AdminDashboard() {
   }
 
   const statCards = [['Users', stats?.totalUsers], ['Drivers', stats?.totalDrivers], ['Pending', stats?.pendingDrivers], ['Active rides', stats?.activeRides], ['Completed', stats?.completedRides], ['Revenue', `Rs ${(stats?.totalRevenue || 0).toFixed(0)}`]]
-  return <section className="role-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">OPERATIONS DESK</p><h1>Keep every ride moving.</h1></div><ShieldCheck size={24} color="#ef6c45" /></div><p className="notice">{notice}</p><div className="admin-stats">{statCards.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? '...'}</strong></div>)}</div><div className="admin-review"><div><p className="eyebrow">DRIVER VERIFICATION</p><h2>Pending applications</h2></div>{drivers.length ? drivers.map((driver) => <div className="request-row" key={driver.id}><div><strong>{driver.vehicleModel} · {driver.vehicleType}</strong><span>{driver.vehicleNumber} · {driver.licenseNumber}</span></div><div><button type="button" onClick={() => review(driver.id, 'approved')}>Approve</button><button type="button" className="quiet-button" onClick={() => review(driver.id, 'rejected')}>Reject</button></div></div>) : <p className="empty-state">No pending driver applications.</p>}</div></section>
+  return <section className="role-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">OPERATIONS DESK</p><h1>Keep every ride moving.</h1></div><ShieldCheck size={24} color="#F5A623" /></div><p className="notice">{notice}</p><div className="admin-stats">{statCards.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? '...'}</strong></div>)}</div><div className="admin-review"><div><p className="eyebrow">DRIVER VERIFICATION</p><h2>Pending applications</h2></div>{drivers.length ? drivers.map((driver) => <div className="request-row" key={driver.id}><div><strong>{driver.vehicleModel} · {driver.vehicleType}</strong><span>{driver.vehicleNumber} · {driver.licenseNumber}</span></div><div><button type="button" onClick={() => review(driver.id, 'approved')}>Approve</button><button type="button" className="quiet-button" onClick={() => review(driver.id, 'rejected')}>Reject</button></div></div>) : <p className="empty-state">No pending driver applications.</p>}</div></section>
 }
 
 export { PassengerDashboard, DriverDashboard, AdminDashboard }
