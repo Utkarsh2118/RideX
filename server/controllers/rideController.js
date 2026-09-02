@@ -1,4 +1,6 @@
 const Ride = require("../models/Ride");
+const User = require("../models/User");
+const Driver = require("../models/Driver");
 const { calculateFare } = require("../services/fareService");
 const { transitionRide } = require("../services/rideService");
 const { matchDriversForRide } = require("../services/driverMatchingService");
@@ -156,4 +158,35 @@ const cancelRide = async (req, res) => {
   res.json({ success: true, message: "Ride cancelled successfully", data: { ride: publicRide(ride) } });
 };
 
-module.exports = { createRide, matchRide, getMyRides, getRideById, cancelRide };
+const getRideDriverInfo = async (req, res) => {
+  const ride = await Ride.findOne({ _id: req.params.rideId, passenger: req.user._id });
+  if (!ride) return res.status(404).json({ success: false, message: "Ride not found" });
+  if (!ride.driver) return res.status(404).json({ success: false, message: "No driver assigned yet" });
+
+  const [driverUser, driverProfile] = await Promise.all([
+    User.findById(ride.driver).select("name phone"),
+    Driver.findOne({ user: ride.driver }).select("vehicleType vehicleNumber vehicleModel vehicleColor rating"),
+  ]);
+
+  if (!driverUser || !driverProfile) {
+    return res.status(404).json({ success: false, message: "Driver details are unavailable" });
+  }
+
+  res.json({
+    success: true,
+    message: "Driver details retrieved successfully",
+    data: {
+      driver: {
+        name: driverUser.name,
+        phone: driverUser.phone,
+        vehicleType: driverProfile.vehicleType,
+        vehicleNumber: driverProfile.vehicleNumber,
+        vehicleModel: driverProfile.vehicleModel,
+        vehicleColor: driverProfile.vehicleColor,
+        rating: driverProfile.rating,
+      },
+    },
+  });
+};
+
+module.exports = { createRide, matchRide, getMyRides, getRideById, cancelRide, getRideDriverInfo };

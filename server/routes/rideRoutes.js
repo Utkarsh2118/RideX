@@ -6,6 +6,7 @@ const {
   getMyRides,
   getRideById,
   cancelRide,
+  getRideDriverInfo,
 } = require("../controllers/rideController");
 const protect = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
@@ -18,6 +19,7 @@ router.post("/", createRide);
 router.get("/", getMyRides);
 router.post("/:rideId/match", matchRide);
 router.get("/:rideId", getRideById);
+router.get("/:rideId/driver", getRideDriverInfo);
 router.patch("/:rideId/cancel", cancelRide);
 
 module.exports = router;
